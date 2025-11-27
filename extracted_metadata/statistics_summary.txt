@@ -1,0 +1,126 @@
+Estatísticas Consolidadas dos Metadados Extraídos
+================================================================================
+
+Total de frames: 35,959
+Total de vídeos: 11
+
+Frames por vídeo:
+--------------------------------------------------------------------------------
+DJI_20251114091504_0053_D: 30 frames
+DJI_20251114091511_0054_D: 1,213 frames
+DJI_20251114093134_0057_D: 976 frames
+DJI_20251114094816_0058_D: 38 frames
+DJI_20251114094933_0059_D: 4,829 frames
+DJI_20251114100232_0060_D: 91 frames
+DJI_20251114100707_0061_D: 783 frames
+DJI_20251114101110_0062_D: 9,762 frames
+DJI_20251114101636_0063_D: 8,194 frames
+DJI_20251114105046_0064_D: 8,562 frames
+DJI_20251114105612_0065_D: 1,481 frames
+
+================================================================================
+
+Estatísticas Detalhadas por Vídeo:
+--------------------------------------------------------------------------------
+
+DJI_20251114091504_0053_D:
+  Frames: 30
+  Latitude: 50.328847 a 50.328848
+  Longitude: 11.938927 a 11.938927
+  Altitude Relativa: 2.20 a 2.20 m (média: 2.20 m)
+  Timestamp inicial: 2025-11-14 09:15:04.416
+  Timestamp final: 2025-11-14 09:15:05.384
+
+DJI_20251114091511_0054_D:
+  Frames: 1213
+  Latitude: 50.328839 a 50.328848
+  Longitude: 11.938927 a 11.939182
+  Altitude Relativa: 2.20 a 2.20 m (média: 2.20 m)
+  Timestamp inicial: 2025-11-14 09:15:11.290
+  Timestamp final: 2025-11-14 09:15:51.729
+
+DJI_20251114093134_0057_D:
+  Frames: 976
+  Latitude: 50.328802 a 50.328944
+  Longitude: 11.938827 a 11.939388
+  Altitude Relativa: 1.50 a 1.60 m (média: 1.52 m)
+  Timestamp inicial: 2025-11-14 09:31:35.625
+  Timestamp final: 2025-11-14 09:32:08.157
+
+DJI_20251114094816_0058_D:
+  Frames: 38
+  Latitude: 50.328464 a 50.328465
+  Longitude: 11.940293 a 11.940293
+  Altitude Relativa: 2.90 a 3.00 m (média: 2.97 m)
+  Timestamp inicial: 2025-11-14 09:48:16.593
+  Timestamp final: 2025-11-14 09:48:17.828
+
+DJI_20251114094933_0059_D:
+  Frames: 4829
+  Latitude: 50.328157 a 50.328467
+  Longitude: 11.940292 a 11.941220
+  Altitude Relativa: 4.90 a 5.20 m (média: 5.09 m)
+  Timestamp inicial: 2025-11-14 09:49:33.670
+  Timestamp final: 2025-11-14 09:52:14.764
+
+DJI_20251114100232_0060_D:
+  Frames: 91
+  Latitude: 50.327801 a 50.327802
+  Longitude: 11.940027 a 11.940028
+  Altitude Relativa: 4.30 a 4.30 m (média: 4.30 m)
+  Timestamp inicial: 2025-11-14 10:02:32.927
+  Timestamp final: 2025-11-14 10:02:35.930
+
+DJI_20251114100707_0061_D:
+  Frames: 783
+  Latitude: 50.327825 a 50.327833
+  Longitude: 11.939951 a 11.939967
+  Altitude Relativa: 4.20 a 4.20 m (média: 4.20 m)
+  Timestamp inicial: 2025-11-14 10:07:07.935
+  Timestamp final: 2025-11-14 10:07:34.028
+
+DJI_20251114101110_0062_D:
+  Frames: 9762
+  Latitude: 50.327551 a 50.328002
+  Longitude: 11.939949 a 11.940767
+  Altitude Relativa: 3.30 a 6.80 m (média: 5.40 m)
+  Timestamp inicial: 2025-11-14 10:11:10.777
+  Timestamp final: 2025-11-14 10:16:36.470
+
+DJI_20251114101636_0063_D:
+  Frames: 8194
+  Latitude: 50.327562 a 50.327897
+  Longitude: 11.940094 a 11.940766
+  Altitude Relativa: 0.10 a 19.60 m (média: 5.17 m)
+  Timestamp inicial: 2025-11-14 10:16:36.503
+  Timestamp final: 2025-11-14 10:21:09.875
+
+DJI_20251114105046_0064_D:
+  Frames: 8562
+  Latitude: 50.327587 a 50.327834
+  Longitude: 11.937886 a 11.937954
+  Altitude Relativa: 5.80 a 8.00 m (média: 7.16 m)
+  Timestamp inicial: 2025-11-14 10:50:46.877
+  Timestamp final: 2025-11-14 10:55:32.529
+
+DJI_20251114105612_0065_D:
+  Frames: 1481
+  Latitude: 50.327824 a 50.327879
+  Longitude: 11.937894 a 11.937931
+  Altitude Relativa: 0.10 a 8.00 m (média: 4.02 m)
+  Timestamp inicial: 2025-11-14 10:56:12.636
+  Timestamp final: 2025-11-14 10:57:02.020
+
+================================================================================
+
+Estatísticas Globais:
+--------------------------------------------------------------------------------
+Latitude mínima: 50.327551
+Latitude máxima: 50.328944
+Longitude mínima: 11.937886
+Longitude máxima: 11.941220
+
+Altitude Relativa:
+  Mínima: 0.10 m
+  Máxima: 19.60 m
+  Média: 5.44 m
