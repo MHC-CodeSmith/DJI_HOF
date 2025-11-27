@@ -1,0 +1,24 @@
+# Ignore raw DJI media
+*.MP4
+*.mp4
+*.MOV
+*.mov
+*.JPG
+*.jpg
+*.DNG
+*.dng
+*.BIN
+*.bin
+
+# Ignore DJI folders
+DJI_*  
+DCIM/
+MISC/
+
+# Ignore large files
+*.zip
+*.gz
+
+# Ignore system files
+.DS_Store
+Thumbs.db
