@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Extração de Metadados de Arquivos SRT DJI
-Extrai informações de GPS, câmera e timestamps de arquivos .SRT do DJI Mini 4 Pro
-Gera CSVs formatados para QGIS/ArcGIS
+DJI SRT Metadata Extraction
+Extracts GPS, camera and timestamp information from DJI Mini 4 Pro .SRT files.
+Generates CSV files formatted for QGIS/ArcGIS.
 """
 
 import re
@@ -13,12 +13,12 @@ from typing import Dict, List, Optional
 
 def parse_metadata_line(line: str) -> Dict[str, Optional[str]]:
     """
-    Extrai metadados de uma linha que contém [key: value] pairs.
-    Retorna um dicionário com todos os campos encontrados.
+    Extracts metadata from a line containing [key: value] pairs.
+    Returns a dictionary with all extracted fields.
     """
     metadata = {}
     
-    # Padrões regex para cada campo
+    # Regex patterns for each field
     patterns = {
         'iso': r'\[iso:\s*(\d+)\]',
         'shutter': r'\[shutter:\s*([^\]]+)\]',
@@ -44,8 +44,8 @@ def parse_metadata_line(line: str) -> Dict[str, Optional[str]]:
 
 def extract_frame_info(lines: List[str]) -> Optional[Dict[str, str]]:
     """
-    Extrai informações de um bloco de frame do SRT.
-    Retorna None se não conseguir extrair dados válidos.
+    Extracts information from an SRT frame block.
+    Returns None if valid data cannot be extracted.
     """
     frame_data = {
         'frame_index': None,
@@ -63,14 +63,14 @@ def extract_frame_info(lines: List[str]) -> Optional[Dict[str, str]]:
         'color_temperature': None
     }
     
-    # Procura por FrameCnt
+    # Search for FrameCnt
     for line in lines:
         frame_match = re.search(r'FrameCnt:\s*(\d+)', line)
         if frame_match:
             frame_data['frame_index'] = frame_match.group(1)
             break
     
-    # Procura por timestamp (formato: YYYY-MM-DD HH:MM:SS.mmm)
+    # Search for timestamp (format: YYYY-MM-DD HH:MM:SS.mmm)
     timestamp_pattern = r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3})'
     for line in lines:
         ts_match = re.search(timestamp_pattern, line)
@@ -78,7 +78,7 @@ def extract_frame_info(lines: List[str]) -> Optional[Dict[str, str]]:
             frame_data['timestamp'] = ts_match.group(1)
             break
     
-    # Procura por linha com metadados [key: value]
+    # Search for line containing [key: value] metadata
     metadata_line = None
     for line in lines:
         if '[' in line and ':' in line and ']' in line:
@@ -88,10 +88,10 @@ def extract_frame_info(lines: List[str]) -> Optional[Dict[str, str]]:
     if not metadata_line:
         return None
     
-    # Extrai todos os metadados
+    # Extract metadata
     metadata = parse_metadata_line(metadata_line)
     
-    # Mapeia os campos
+    # Map fields
     frame_data['iso'] = metadata.get('iso')
     frame_data['shutter'] = metadata.get('shutter')
     frame_data['aperture'] = metadata.get('fnum')
@@ -104,7 +104,7 @@ def extract_frame_info(lines: List[str]) -> Optional[Dict[str, str]]:
     frame_data['absolute_altitude'] = metadata.get('abs_alt')
     frame_data['color_temperature'] = metadata.get('ct')
     
-    # Valida se tem pelo menos frame_index e coordenadas
+    # Validate essential fields
     if frame_data['frame_index'] and frame_data['latitude'] and frame_data['longitude']:
         return frame_data
     
@@ -112,12 +112,12 @@ def extract_frame_info(lines: List[str]) -> Optional[Dict[str, str]]:
 
 def parse_srt_file(srt_path: Path) -> List[Dict[str, str]]:
     """
-    Parse um arquivo SRT completo e retorna lista de dicionários com metadados.
+    Parses a full SRT file and returns a list of metadata dictionaries.
     """
     with open(srt_path, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # Divide em blocos de frames (cada bloco é separado por linha em branco dupla)
+    # Split into frame blocks (each block separated by double blank line)
     blocks = re.split(r'\n\s*\n', content)
     
     all_frames = []
@@ -136,16 +136,16 @@ def parse_srt_file(srt_path: Path) -> List[Dict[str, str]]:
 
 def write_csv(data: List[Dict[str, str]], output_path: Path):
     """
-    Escreve os dados extraídos em formato CSV para QGIS/ArcGIS.
+    Writes extracted data to a CSV formatted for QGIS/ArcGIS.
     """
     if not data:
-        print(f"⚠️  Nenhum dado encontrado para escrever em {output_path}")
+        print(f"⚠️  No data found to write to {output_path}")
         return
     
-    # Ordena por frame_index
+    # Sort by frame_index
     data_sorted = sorted(data, key=lambda x: int(x.get('frame_index', 0)))
     
-    # Define os campos na ordem desejada
+    # Columns in the desired order
     fieldnames = [
         'frame_index',
         'timestamp',
@@ -167,58 +167,58 @@ def write_csv(data: List[Dict[str, str]], output_path: Path):
         writer.writeheader()
         
         for frame in data_sorted:
-            # Prepara os dados garantindo que todos os campos existam
+            # Ensure all fields exist
             row = {field: frame.get(field, '') for field in fieldnames}
             writer.writerow(row)
     
-    print(f"✅ CSV criado: {output_path} ({len(data_sorted)} frames)")
+    print(f"✅ CSV created: {output_path} ({len(data_sorted)} frames)")
 
 def process_all_srt_files(base_dir: Path):
     """
-    Processa todos os arquivos .SRT no diretório e cria estrutura organizada.
+    Processes all .SRT files in the directory and creates an organized structure.
     """
     base_dir = Path(base_dir)
     
-    # Encontra todos os arquivos SRT
+    # Find all SRT files
     srt_files = list(base_dir.rglob('*.SRT')) + list(base_dir.rglob('*.srt'))
     
     if not srt_files:
-        print(f"⚠️  Nenhum arquivo .SRT encontrado em {base_dir}")
+        print(f"⚠️  No .SRT files found in {base_dir}")
         return
     
-    print(f"📁 Encontrados {len(srt_files)} arquivo(s) .SRT\n")
+    print(f"📁 Found {len(srt_files)} .SRT file(s)\n")
     
-    # Cria diretório de saída principal
+    # Create output folder
     output_base = base_dir / 'extracted_metadata'
     output_base.mkdir(exist_ok=True)
     
     processed_count = 0
     
     for srt_file in sorted(srt_files):
-        print(f"🔄 Processando: {srt_file.name}")
+        print(f"🔄 Processing: {srt_file.name}")
         
         try:
-            # Extrai o nome base (sem extensão)
+            # Extract base name (without extension)
             base_name = srt_file.stem
             
-            # Cria pasta para este arquivo
+            # Create folder for this file
             file_output_dir = output_base / base_name
             file_output_dir.mkdir(exist_ok=True)
             
-            # Processa o arquivo SRT
+            # Process SRT file
             frames_data = parse_srt_file(srt_file)
             
             if frames_data:
-                # Cria arquivo CSV
+                # Create CSV file
                 csv_path = file_output_dir / f'{base_name}_metadata.csv'
                 write_csv(frames_data, csv_path)
                 
-                # Cria um resumo em texto
+                # Create summary text file
                 summary_path = file_output_dir / f'{base_name}_summary.txt'
                 with open(summary_path, 'w', encoding='utf-8') as f:
-                    f.write(f"Arquivo: {srt_file.name}\n")
-                    f.write(f"Total de frames extraídos: {len(frames_data)}\n")
-                    f.write(f"\nPrimeiros 5 frames:\n")
+                    f.write(f"File: {srt_file.name}\n")
+                    f.write(f"Total frames extracted: {len(frames_data)}\n")
+                    f.write(f"\nFirst 5 frames:\n")
                     f.write("-" * 80 + "\n")
                     
                     for i, frame in enumerate(frames_data[:5], 1):
@@ -227,30 +227,29 @@ def process_all_srt_files(base_dir: Path):
                         f.write(f"  Timestamp: {frame.get('timestamp')}\n")
                         f.write(f"  Latitude: {frame.get('latitude')}\n")
                         f.write(f"  Longitude: {frame.get('longitude')}\n")
-                        f.write(f"  Altitude Relativa: {frame.get('relative_altitude')} m\n")
+                        f.write(f"  Relative Altitude: {frame.get('relative_altitude')} m\n")
                         f.write(f"  ISO: {frame.get('iso')}\n")
                         f.write(f"  Focal Length: {frame.get('focal_length')} mm\n")
                 
-                print(f"   ✅ {len(frames_data)} frames extraídos\n")
+                print(f"   ✅ {len(frames_data)} frames extracted\n")
                 processed_count += 1
             else:
-                print(f"   ⚠️  Nenhum frame válido encontrado\n")
+                print(f"   ⚠️  No valid frames found\n")
                 
         except Exception as e:
-            print(f"   ❌ Erro ao processar {srt_file.name}: {str(e)}\n")
+            print(f"   ❌ Error processing {srt_file.name}: {str(e)}\n")
     
     print(f"\n{'='*80}")
-    print(f"✅ Processamento concluído!")
-    print(f"   {processed_count}/{len(srt_files)} arquivos processados com sucesso")
-    print(f"   Arquivos extraídos em: {output_base}")
+    print(f"✅ Processing complete!")
+    print(f"   {processed_count}/{len(srt_files)} files processed successfully")
+    print(f"   Extracted files saved to: {output_base}")
     print(f"{'='*80}")
 
 if __name__ == '__main__':
-    # Diretório base do projeto
+    # Project base directory
     project_dir = Path(__file__).parent
     
-    print("🚀 Iniciando extração de metadados dos arquivos SRT DJI\n")
-    print(f"📂 Diretório: {project_dir}\n")
+    print("🚀 Starting metadata extraction from DJI SRT files\n")
+    print(f"📂 Directory: {project_dir}\n")
     
     process_all_srt_files(project_dir)
-

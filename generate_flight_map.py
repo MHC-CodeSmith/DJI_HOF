@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Gera um mapa interativo (Leaflet) com o trajeto dos voos.
-Usa apenas bibliotecas padrão e lê o arquivo all_metadata_consolidated.csv.
+Generates an interactive map (Leaflet) showing flight tracks.
+Uses only standard libraries and reads all_metadata_consolidated.csv.
 """
 
 import csv
@@ -11,7 +11,7 @@ from statistics import mean
 
 
 def load_metadata(csv_path):
-    """Lê o CSV consolidado e retorna lista de dicionários com tipos convertidos."""
+    """Reads the consolidated CSV and returns a list of dictionaries with converted types."""
     rows = []
     with open(csv_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -49,37 +49,45 @@ def load_metadata(csv_path):
 
 
 def group_by_video(rows):
+    """Groups all rows by their corresponding video_name and sorts each flight by frame_index."""
     grouped = {}
     for row in rows:
         grouped.setdefault(row["video_name"], []).append(row)
-    # Ordena cada voo por frame_index
+
+    # Sort each flight by frame_index
     for rows in grouped.values():
         rows.sort(key=lambda r: int(r["frame_index"]) if r["frame_index"] else 0)
+
     return grouped
 
 
 def altitude_to_color(value, min_alt, max_alt):
-    """Retorna cor hex baseada na altitude relativa."""
+    """Returns a hex color based on relative altitude using a blue-to-red gradient."""
     if value is None or min_alt is None or max_alt is None:
         return "#888888"
+
     if max_alt == min_alt:
         ratio = 0.5
     else:
         ratio = (value - min_alt) / (max_alt - min_alt)
+
     ratio = max(0.0, min(1.0, ratio))
-    # Gradiente azul (#2c7bb6) para vermelho (#d73027)
+
+    # Gradient from blue (#2c7bb6) to red (#d73027)
     start = (44, 123, 182)
     end = (215, 48, 39)
+
     r = int(start[0] + (end[0] - start[0]) * ratio)
     g = int(start[1] + (end[1] - start[1]) * ratio)
     b = int(start[2] + (end[2] - start[2]) * ratio)
+
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
 def build_map_html(flights, bounds, output_path):
-    """Gera o HTML do mapa e salva em output_path."""
-    center_lat = mean([b for b in [bounds[0][0], bounds[1][0]]])
-    center_lon = mean([b for b in [bounds[0][1], bounds[1][1]]])
+    """Generates the HTML map and writes it to output_path."""
+    center_lat = mean([bounds[0][0], bounds[1][0]])
+    center_lon = mean([bounds[0][1], bounds[1][1]])
 
     html_template = f"""<!DOCTYPE html>
 <html lang="en">
@@ -113,7 +121,7 @@ def build_map_html(flights, bounds, output_path):
 <body>
   <div id="map"></div>
   <div class="legend">
-    <strong>Altitude relativa (m)</strong>
+    <strong>Relative Altitude (m)</strong>
     <div class="legend-gradient"></div>
     <div style="display:flex;justify-content:space-between;">
       <span>{flights['altitude_range']['min']:.2f}</span>
@@ -156,7 +164,7 @@ def build_map_html(flights, bounds, output_path):
           Frame: ${{point.frame_index}}<br/>
           Timestamp: ${{point.timestamp}}<br/>
           Lat/Lon: ${{point.latitude.toFixed(6)}}, ${{point.longitude.toFixed(6)}}<br/>
-          Alt. relativa: ${{point.relative_altitude ?? 'N/A'}} m<br/>
+          Rel. Altitude: ${{point.relative_altitude ?? 'N/A'}} m<br/>
           ISO: ${{point.iso}} | Shutter: ${{point.shutter}} | f/${{point.aperture}}
         `;
 
@@ -179,45 +187,50 @@ def build_map_html(flights, bounds, output_path):
     }});
 
     const overlays = {{
-      "Colorir por voo": colorByFlight,
-      "Colorir por altitude": colorByAltitude
+      "Color by Flight": colorByFlight,
+      "Color by Altitude": colorByAltitude
     }};
     L.control.layers(null, overlays, {{ collapsed: false }}).addTo(map);
   </script>
 </body>
 </html>
 """
+
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_template)
-    print(f"✅ Mapa criado em: {output_path}")
+
+    print(f"✅ Map created at: {output_path}")
 
 
 def main():
     base_dir = Path(__file__).parent
     csv_path = base_dir / "extracted_metadata" / "all_metadata_consolidated.csv"
+
     if not csv_path.exists():
-        raise FileNotFoundError(f"CSV consolidado não encontrado: {csv_path}")
+        raise FileNotFoundError(f"Consolidated CSV not found: {csv_path}")
 
     rows = load_metadata(csv_path)
     if not rows:
-        raise RuntimeError("Nenhum dado disponível para gerar o mapa.")
+        raise RuntimeError("No data available to generate the map.")
 
     all_lats = [r["latitude"] for r in rows]
     all_lons = [r["longitude"] for r in rows]
+
     bounds = [
         [min(all_lats), min(all_lons)],
         [max(all_lats), max(all_lons)],
     ]
 
     altitudes = [r["relative_altitude"] for r in rows if r["relative_altitude"] is not None]
-    if altitudes:
-        min_alt = min(altitudes)
-        max_alt = max(altitudes)
-    else:
-        min_alt = max_alt = 0.0
+    min_alt = min(altitudes) if altitudes else 0.0
+    max_alt = max(altitudes) if altitudes else 0.0
 
     grouped = group_by_video(rows)
-    flight_payload = {"data": [], "altitude_range": {"min": min_alt, "max": max_alt}}
+
+    flight_payload = {
+        "data": [],
+        "altitude_range": {"min": min_alt, "max": max_alt},
+    }
 
     for video_name, points in grouped.items():
         flight_points = []
@@ -243,10 +256,10 @@ def main():
 
     output_dir = base_dir / "maps"
     output_dir.mkdir(exist_ok=True)
+
     output_file = output_dir / "flight_map.html"
     build_map_html(flight_payload, bounds, output_file)
 
 
 if __name__ == "__main__":
     main()
-
