@@ -300,7 +300,7 @@ def build_map_html(points, bounds, output_path: Path):
     output_path.parent.mkdir(exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html)
-    print(f"✅ Analytical map created: {output_path}")
+    print(f"Analytical map created: {output_path}")
 
 # ---------------------------
 # Main
@@ -310,11 +310,11 @@ def main():
     base_dir = Path(__file__).parent
     csv_path = base_dir / "extracted_metadata" / "all_metadata_with_health.csv"
     if not csv_path.exists():
-        print(f"❌ CSV not found: {csv_path}")
+        print(f"CSV not found: {csv_path}")
         return
     points = load_metadata_with_health(csv_path)
     if not points:
-        print("❌ No points loaded (check CSV columns: latitude, longitude, health_index, video_name/frame_index)")
+        print("No points loaded (check CSV columns: latitude, longitude, health_index, video_name/frame_index)")
         return
     bounds = calculate_bounds(points)
     output_file = base_dir / "maps" / "map_per_track.html"
