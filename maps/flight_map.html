@@ -30,7 +30,7 @@
 <body>
   <div id="map"></div>
   <div class="legend">
-    <strong>Altitude relativa (m)</strong>
+    <strong>Relative Altitude (m)</strong>
     <div class="legend-gradient"></div>
     <div style="display:flex;justify-content:space-between;">
       <span>0.00</span>
@@ -73,7 +73,7 @@
           Frame: ${point.frame_index}<br/>
           Timestamp: ${point.timestamp}<br/>
           Lat/Lon: ${point.latitude.toFixed(6)}, ${point.longitude.toFixed(6)}<br/>
-          Alt. relativa: ${point.relative_altitude ?? 'N/A'} m<br/>
+          Rel. Altitude: ${point.relative_altitude ?? 'N/A'} m<br/>
           ISO: ${point.iso} | Shutter: ${point.shutter} | f/${point.aperture}
         `;
 
@@ -96,8 +96,8 @@
     });
 
     const overlays = {
-      "Colorir por voo": colorByFlight,
-      "Colorir por altitude": colorByAltitude
+      "Color by Flight": colorByFlight,
+      "Color by Altitude": colorByAltitude
     };
     L.control.layers(null, overlays, { collapsed: false }).addTo(map);
   </script>
