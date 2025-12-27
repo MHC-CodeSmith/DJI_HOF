@@ -206,3 +206,4 @@ Após validar o modelo:
 - Podem ser executados **múltiplas vezes** sem problemas
 - Úteis para **debug** e **apresentações** de resultados
 
+
