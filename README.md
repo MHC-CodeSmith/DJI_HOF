@@ -100,8 +100,10 @@ python main.py pipeline
 ## 🗺️ Outputs
 
 After running the pipeline, find your maps in `maps/`:
-*   `maps/flight_map.html`: Shows the drone's path and altitude.
-*   `maps/analytical_map.html`: Interpolated heatmap showing vegetation health (Green=Healthy, Red=Unhealthy).
+*   **`maps/flight_map.html`**: Shows the drone's path and altitude.
+*   **`maps/analytical_map.html`**: Interactive Health Map containing:
+    *   **Global Heatmap**: Interpolated view of vegetation health (Green=Healthy, Red=Unhealthy).
+    *   **Per-Track Layers**: Toggleable layers for individual flights, showing heatmap, specific points, and flight paths.
+    *   **Satellite Base**: Esri World Imagery background.
 
 ---
-*Created by Antigravity (Google DeepMind) for MHC.*

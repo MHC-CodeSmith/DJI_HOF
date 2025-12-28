@@ -72,7 +72,7 @@ def load_metadata_rows(csv_path: Path):
 def write_metadata_with_health(original_fieldnames, rows, output_path: Path):
     """Writes the new CSV with health columns."""
     new_fields = [
-        "health_ratio_percent",
+        "health_index",
         "unhealthy_ratio_percent",
         "health_status",
     ]
@@ -125,7 +125,7 @@ def process_video_and_csv(video_folder, metadata_csv):
         # using a small resize for speed, e.g. 256x256
         h_ratio, u_ratio, status = predict_frame(frame, clf, scaler, resize_dim=(256, 256))
 
-        row["health_ratio_percent"] = f"{h_ratio:.2f}"
+        row["health_index"] = f"{h_ratio:.2f}"
         row["unhealthy_ratio_percent"] = f"{u_ratio:.2f}"
         row["health_status"] = status
 
@@ -139,28 +139,71 @@ def process_video_and_csv(video_folder, metadata_csv):
     output_csv = metadata_csv.with_name(metadata_csv.stem + "_with_health.csv")
     write_metadata_with_health(fieldnames, rows[:processed_count], output_csv)
 
+def process_batch(flights_dir: Path, processed_dir: Path):
+    """
+    Iterates over all flight folders in flights_dir and processes them.
+    """
+    if not flights_dir.exists():
+        print(f"❌ Flights directory not found: {flights_dir}")
+        return
+
+    flight_folders = [f for f in flights_dir.iterdir() if f.is_dir()]
+    print(f"📂 Found {len(flight_folders)} flight folders in {flights_dir}")
+
+    total_processed = 0
+
+    for folder in sorted(flight_folders):
+        video_name = folder.name
+        print(f"\n🔄 Processing Flight: {video_name}")
+        
+        # Determine paths
+        # Video is in datasets/flights/<VideoName>/*.mp4
+        # Metadata is in data/processed/extracted_metadata/<VideoName>/<VideoName>_metadata.csv
+        
+        metadata_csv_folder = processed_dir / video_name
+        metadata_csv = metadata_csv_folder / f"{video_name}_metadata.csv"
+        
+        if not metadata_csv.exists():
+            print(f"   ⚠️ Metadata CSV not found: {metadata_csv} (Skipping)")
+            continue
+            
+        try:
+            process_video_and_csv(folder, metadata_csv)
+            total_processed += 1
+        except Exception as e:
+            print(f"   ❌ Error processing {video_name}: {e}")
+
+    print(f"\n✅ Batch processing complete. Processed {total_processed}/{len(flight_folders)} flights.")
+
 def main():
     # Allow arguments or fallback to defaults
-    video_folder = DEFAULT_VIDEO_FOLDER
-    metadata_csv = DEFAULT_METADATA_CSV
     
-    if len(sys.argv) > 1:
-        # Simplistic arg parsing for now
-        # Usage: python sync_video_csv.py [video_folder] [metadata_csv]
-        video_folder = Path(sys.argv[1])
-        if len(sys.argv) > 2:
-            metadata_csv = Path(sys.argv[2])
+    # Check if we are in batch mode (no args provided, or batch flag)
+    # Default behavior: run batch on project structure
+    
+    base_dir = PROJECT_ROOT
+    flights_dir = base_dir / "datasets" / "flights"
+    processed_dir = base_dir / "data" / "processed" / "extracted_metadata"
 
-    print(f"🚀 Starting sync_video_csv.py")
-    print(f"📂 Video Folder: {video_folder}")
-    print(f"📄 Metadata CSV: {metadata_csv}")
+    # Support single file mode validation if args provided
+    if len(sys.argv) > 1 and sys.argv[1] != "batch":
+        video_folder = Path(sys.argv[1])
+        metadata_csv = Path(sys.argv[2]) if len(sys.argv) > 2 else DEFAULT_METADATA_CSV
+        print(f"🚀 Running Single Video Sync")
+        try:
+            process_video_and_csv(video_folder, metadata_csv)
+            print("\n✅ Processing complete.")
+        except Exception as e:
+            print(f"\n❌ Error: {e}")
+            sys.exit(1)
+        return
+
+    # Batch Mode
+    print(f"🚀 Starting Batch Sync (All Videos)")
+    print(f"📂 Flights Dir: {flights_dir}")
+    print(f"📄 Metadata Dir: {processed_dir}")
     
-    try:
-        process_video_and_csv(video_folder, metadata_csv)
-        print("\n✅ Processing complete.")
-    except Exception as e:
-        print(f"\n❌ Error: {e}")
-        sys.exit(1)
+    process_batch(flights_dir, processed_dir)
 
 if __name__ == "__main__":
     main()

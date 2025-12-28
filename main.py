@@ -25,6 +25,7 @@ SCRIPTS = {
     "train": PROJECT_ROOT / "src" / "models" / "train_model.py",
     "extract": PROJECT_ROOT / "src" / "ingestion" / "extract_metadata.py",
     "sync": PROJECT_ROOT / "src" / "processing" / "sync_video_csv.py",
+    "consolidate": PROJECT_ROOT / "src" / "processing" / "consolidate_csvs.py",
     "map-flight": PROJECT_ROOT / "src" / "visualization" / "flight_map.py",
     "map-analytical": PROJECT_ROOT / "src" / "visualization" / "analytical_map.py",
 }
@@ -59,6 +60,7 @@ def main():
     subparsers.add_parser("train", help="Train the pixelwise model")
     subparsers.add_parser("extract", help="Extract metadata from SRTs")
     subparsers.add_parser("sync", help="Apply health model to video frames")
+    subparsers.add_parser("consolidate", help="Consolidate all CSVs into one")
     subparsers.add_parser("map-flight", help="Generate flight trajectory map")
     subparsers.add_parser("map-analytical", help="Generate analytical health map")
     subparsers.add_parser("pipeline", help="Run extract -> sync -> maps sequence")
@@ -71,7 +73,7 @@ def main():
 
     if args.command == "pipeline":
         # Run sequence
-        steps = ["extract", "sync", "map-flight", "map-analytical"]
+        steps = ["extract", "sync", "consolidate", "map-flight", "map-analytical"]
         for step in steps:
             success = run_script(step, unknown_args)
             if not success:
