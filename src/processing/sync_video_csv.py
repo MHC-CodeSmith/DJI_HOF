@@ -13,7 +13,9 @@ sync_video_csv.py
 import csv
 import cv2
 import sys
+import av
 from pathlib import Path
+from datetime import datetime
 
 # Local import
 try:
@@ -139,6 +141,138 @@ def process_video_and_csv(video_folder, metadata_csv):
     output_csv = metadata_csv.with_name(metadata_csv.stem + "_with_health.csv")
     write_metadata_with_health(fieldnames, rows[:processed_count], output_csv)
 
+def process_video_stream(stream_url: str, output_csv_path: Path = None, metadata_csv_path: Path = None):
+    """
+    Processes a live video stream (RTMP/HTTP) and logs health analysis results to CSV in real-time.
+    
+    Args:
+        stream_url: URL of the video stream (e.g., "rtmp://127.0.0.1/live")
+        output_csv_path: Optional path for output CSV. If None, creates a timestamped file.
+        metadata_csv_path: Optional path to metadata CSV for additional context (GPS, etc.)
+    """
+    # Determine output CSV path
+    if output_csv_path is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = PROJECT_ROOT / "data" / "processed" / "stream_logs"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_csv_path = output_dir / f"stream_health_{timestamp}.csv"
+    else:
+        output_csv_path = Path(output_csv_path)
+        output_csv_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    print(f"[INFO] Output CSV: {output_csv_path}")
+    
+    # Load metadata if provided (optional)
+    metadata_map = {}
+    if metadata_csv_path and Path(metadata_csv_path).exists():
+        print(f"[INFO] Loading metadata from: {metadata_csv_path}")
+        _, metadata_rows = load_metadata_rows(Path(metadata_csv_path))
+        # Build frame index map if frame_index exists
+        for row in metadata_rows:
+            if row.get("frame_index"):
+                try:
+                    frame_idx = int(row["frame_index"])
+                    metadata_map[frame_idx] = row
+                except ValueError:
+                    pass
+        print(f"[INFO] Loaded metadata for {len(metadata_map)} frames")
+    
+    # Load Model
+    print("[INFO] Loading model...")
+    clf, scaler = load_model_and_scaler()
+    print("[INFO] Model loaded successfully.")
+
+    # Define CSV fieldnames
+    base_fields = [
+        "frame_number",
+        "timestamp",
+        "health_index",
+        "unhealthy_ratio_percent",
+        "health_status",
+    ]
+    
+    # Add optional metadata fields if metadata is available
+    metadata_fields = [
+        "latitude", "longitude", "relative_altitude", "absolute_altitude",
+        "iso", "shutter", "aperture", "ev", "color_mode", "focal_length", "color_temperature"
+    ]
+    
+    # Use metadata fields if we have metadata, otherwise just base fields
+    if metadata_map:
+        fieldnames = base_fields + metadata_fields
+    else:
+        fieldnames = base_fields
+    
+    # Open CSV file for incremental writing
+    csv_file = open(output_csv_path, "w", newline="", encoding="utf-8")
+    csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+    csv_writer.writeheader()
+    csv_file.flush()  # Write header immediately
+    
+    print("[INFO] Opening video stream...")
+    container = av.open(stream_url)
+    try:
+        container.streams.video[0]
+    except Exception as e:
+        container.close()
+        csv_file.close()
+        raise RuntimeError(f"Could not open video stream: {stream_url}. Error: {e}")
+
+    print("[INFO] Processing stream (press ESC to stop)...")
+    frame_count = 0
+    processed_count = 0
+    
+    try:
+        for frame in container.decode(video=0):
+            img = frame.to_ndarray(format="bgr24")
+            
+            # Compute health metrics
+            h_ratio, u_ratio, status = predict_frame(img, clf, scaler, resize_dim=(256, 256))
+            
+            # Build row data
+            row = {
+                "frame_number": str(frame_count),
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],  # Format: YYYY-MM-DD HH:MM:SS.mmm
+                "health_index": f"{h_ratio:.2f}",
+                "unhealthy_ratio_percent": f"{u_ratio:.2f}",
+                "health_status": status,
+            }
+            
+            # Add metadata if available
+            if metadata_map and frame_count in metadata_map:
+                metadata = metadata_map[frame_count]
+                for field in metadata_fields:
+                    row[field] = metadata.get(field, "")
+            elif metadata_map:
+                # Fill with empty values if metadata not found for this frame
+                for field in metadata_fields:
+                    row[field] = ""
+            
+            # Write to CSV immediately
+            csv_writer.writerow(row)
+            csv_file.flush()  # Ensure data is written immediately
+            
+            processed_count += 1
+            
+            # Progress update every 30 frames
+            if processed_count % 30 == 0:
+                print(f"  -> Processed {processed_count} frames | Health: {h_ratio:.1f}% | Status: {status}")
+            
+            frame_count += 1
+            
+    except KeyboardInterrupt:
+        print("\n[INFO] Stream processing interrupted by user.")
+    except Exception as e:
+        print(f"\n[ERROR] Error processing stream: {e}")
+        raise
+    finally:
+        csv_file.close()
+        container.close()
+        print(f"[INFO] Stream processing complete. Processed {processed_count} frames.")
+        print(f"[INFO] Results saved to: {output_csv_path}")
+
+
+
 def process_batch(flights_dir: Path, processed_dir: Path):
     """
     Iterates over all flight folders in flights_dir and processes them.
@@ -185,6 +319,30 @@ def main():
     flights_dir = base_dir / "datasets" / "flights"
     processed_dir = base_dir / "data" / "processed" / "extracted_metadata"
 
+    # Check for stream mode (URL starts with rtmp://, http://, https://, or stream://)
+    if len(sys.argv) > 1:
+        first_arg = sys.argv[1].lower()
+        if first_arg.startswith(("rtmp://", "http://", "https://", "stream://", "udp://")):
+            # Stream mode
+            stream_url = sys.argv[1]
+            output_csv = Path(sys.argv[2]) if len(sys.argv) > 2 else None
+            metadata_csv = Path(sys.argv[3]) if len(sys.argv) > 3 else None
+            
+            print(f"🚀 Running Live Stream Processing")
+            print(f"📡 Stream URL: {stream_url}")
+            if output_csv:
+                print(f"📄 Output CSV: {output_csv}")
+            if metadata_csv:
+                print(f"📋 Metadata CSV: {metadata_csv}")
+            
+            try:
+                process_video_stream(stream_url, output_csv, metadata_csv)
+                print("\n✅ Stream processing complete.")
+            except Exception as e:
+                print(f"\n❌ Error: {e}")
+                sys.exit(1)
+            return
+    
     # Support single file mode validation if args provided
     if len(sys.argv) > 1 and sys.argv[1] != "batch":
         video_folder = Path(sys.argv[1])
