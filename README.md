@@ -44,9 +44,9 @@ graph TD
     CSV --> Map1 & Map2
     
     style Input fill:#000000,stroke:#01579b
-    style Processing fill:#fff3e0,stroke:#ff6f00
-    style ML fill:#e8f5e9,stroke:#2e7d32
-    style Output fill:#f3e5f5,stroke:#7b1fa2
+    style Processing fill:#000000,stroke:#ff6f00
+    style ML fill:#000000,stroke:#2e7d32
+    style Output fill:#000000,stroke:#7b1fa2
 ```
 
 ## 📂 Project Structure
