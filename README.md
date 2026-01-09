@@ -175,7 +175,7 @@ Each member contributed to a specific technical domain of the project:
 | :--- | :--- | :--- |
 | **Matheus** | **Lead & Integration** | Pipeline Architecture, Sync Logic, Validation Scripts |
 | **Zihad** | **Mapping (Frontend)** | Leaflet/Folium Visualization, UX/UI, Custom CSS |
-| **Berkay** | **Mapping (Backend)** | IDW Interpolation Logic, Color Scale Algorithms |
+| **Berkay** | **Mapping (Backend) & Drone Usager Leader** | IDW Interpolation Logic, Color Scale Algorithms | Understanding waypoint logic and teaching it |
 | **Yevhenii** | **Streaming** | RTMP Architecture Design, Latency Profiling |
 | **Sultan** | **Hardware/Ops** | Lab Testing, GPU Environment, Video Link Validation |
 | **Roma** | **QA/Testing** | System Robustness Testing, Demo Recording |
