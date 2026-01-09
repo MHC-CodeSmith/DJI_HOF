@@ -14,6 +14,7 @@ import csv
 import cv2
 import sys
 import av
+import numpy as np
 from pathlib import Path
 from datetime import datetime
 
@@ -125,7 +126,7 @@ def process_video_and_csv(video_folder, metadata_csv):
 
         # Compute health
         # using a small resize for speed, e.g. 256x256
-        h_ratio, u_ratio, status = predict_frame(frame, clf, scaler, resize_dim=(256, 256))
+        h_ratio, u_ratio, status, mask = predict_frame(frame, clf, scaler, resize_dim=(256, 256))
 
         row["health_index"] = f"{h_ratio:.2f}"
         row["unhealthy_ratio_percent"] = f"{u_ratio:.2f}"
@@ -219,15 +220,24 @@ def process_video_stream(stream_url: str, output_csv_path: Path = None, metadata
         raise RuntimeError(f"Could not open video stream: {stream_url}. Error: {e}")
 
     print("[INFO] Processing stream (press ESC to stop)...")
+    
+    # Nginx handles recording now (to preserve GPS/metadata)
+    # We just focus on visualization
+    
     frame_count = 0
     processed_count = 0
+
     
     try:
         for frame in container.decode(video=0):
             img = frame.to_ndarray(format="bgr24")
             
+            # --- Recording ---
+            # Handled by Nginx
+            
             # Compute health metrics
-            h_ratio, u_ratio, status = predict_frame(img, clf, scaler, resize_dim=(256, 256))
+            # Note: predict_frame now returns mask too
+            h_ratio, u_ratio, status, mask_small = predict_frame(img, clf, scaler, resize_dim=(256, 256))
             
             # Build row data
             row = {
@@ -254,11 +264,45 @@ def process_video_stream(stream_url: str, output_csv_path: Path = None, metadata
             
             processed_count += 1
             
-            # Progress update every 30 frames
-            if processed_count % 30 == 0:
-                print(f"  -> Processed {processed_count} frames | Health: {h_ratio:.1f}% | Status: {status}")
-            
             frame_count += 1
+            
+            # --- Visual Feedback ---
+            
+            # Resize mask back to original image size for overlay
+            # mask_small is 256x256 (0=Unhealthy, 1=Healthy)
+            mask_full = cv2.resize(mask_small, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
+            
+            # Create overlay
+            overlay = np.zeros_like(img)
+            
+            # Green for Healthy (1), Red for Unhealthy (0)
+            # mask_full == 1 -> Green (0, 255, 0)
+            overlay[mask_full == 1] = [0, 255, 0]
+            
+            # mask_full == 0 -> Red (0, 0, 255)
+            overlay[mask_full == 0] = [0, 0, 255]
+            
+            # Blend with original
+            alpha = 0.3  # Transparency
+            cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
+            
+            # Add text info
+            cv2.putText(img, f"Health Index: {h_ratio:.2f}", (10, 30), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            
+            # Color status text
+            status_color = (0, 255, 0) if status == "Healthy" else (0, 165, 255) if status == "Moderate" else (0, 0, 255)
+            cv2.putText(img, f"Status: {status}", (10, 70), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, status_color, 2)
+            
+            # Show the frame
+            cv2.imshow("DJI Stream Health Analysis", img)
+            
+            # Press ESC to exit
+            if cv2.waitKey(1) & 0xFF == 27:
+                print("\n[INFO] ESC pressed. Stopping...")
+                break
+
             
     except KeyboardInterrupt:
         print("\n[INFO] Stream processing interrupted by user.")

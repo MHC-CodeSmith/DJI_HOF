@@ -50,7 +50,9 @@ def predict_frame(frame, clf, scaler, resize_dim=(128, 128)):
         healthy_ratio: Percentage of healthy pixels (0-100).
         unhealthy_ratio: Percentage of unhealthy pixels (0-100).
         status: String "Healthy", "Moderate", or "Unhealthy".
+        mask: Numpy array of shape (height, width) with 0=Unhealthy, 1=Healthy.
     """
+    original_h, original_w = frame.shape[:2]
     if resize_dim:
         frame_proc = cv2.resize(frame, resize_dim)
     else:
@@ -64,6 +66,15 @@ def predict_frame(frame, clf, scaler, resize_dim=(128, 128)):
     # Predict pixel-wise
     # 0 = unhealthy, 1 = healthy
     preds = clf.predict(feats)
+    
+    # Reshape preds back to image shape (H, W)
+    # compute_features flattens the image, so we know the size corresponds to resize_dim or original frame
+    if resize_dim:
+        w, h = resize_dim
+    else:
+        h, w = frame.shape[:2]
+        
+    mask = preds.reshape((h, w))
     
     # Calculate ratios
     total_pixels = preds.size
@@ -80,4 +91,4 @@ def predict_frame(frame, clf, scaler, resize_dim=(128, 128)):
     else:
         status = "Unhealthy"
         
-    return healthy_ratio, unhealthy_ratio, status
+    return healthy_ratio, unhealthy_ratio, status, mask

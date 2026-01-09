@@ -1,0 +1,13 @@
+Validation Metrics for PlantVillage Test Set
+Accuracy: 83.14%
+
+Classification Report:
+              precision    recall  f1-score   support
+
+   Unhealthy       0.87      0.94      0.90      5225
+     Healthy       0.44      0.27      0.33       967
+
+    accuracy                           0.83      6192
+   macro avg       0.65      0.60      0.62      6192
+weighted avg       0.81      0.83      0.81      6192
+
