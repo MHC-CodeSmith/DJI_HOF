@@ -22,3 +22,7 @@ MISC/
 # Ignore system files
 .DS_Store
 Thumbs.db
+
+# Livestream Data
+datasets/livestreams/
+data/processed/stream_logs/
