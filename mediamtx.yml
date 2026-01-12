@@ -1,0 +1,18 @@
+
+###############################################
+# RTMP settings
+rtmp: yes
+rtmpAddress: :1998
+
+###############################################
+# Path settings
+paths:
+  all:
+    # Record streams to disk
+    record: yes
+    # Path to save recordings (using %path variables)
+    recordPath: ./datasets/livestreams/%path/%Y-%m-%d_%H-%M-%S
+    # Format: fmp4 (fragmented MP4) is robust and might keep metadata
+    recordFormat: fmp4
+    # Delete segments after... (keep them)
+    recordDeleteAfter: 0s

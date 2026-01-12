@@ -250,12 +250,52 @@ def process_all_srt_files(base_dir: Path):
     print(f"{'='*80}")
 
 if __name__ == '__main__':
+    import sys
+
     # Project base directory
     project_dir = Path(__file__).resolve().parent.parent.parent
-    flights_dir = project_dir / "datasets" / "flights"
     
-    print("🚀 Starting metadata extraction from DJI SRT files\n")
-    print(f"📂 Directory: {flights_dir}\n")
-    
-    # Process files in the datasets/flights directory
-    process_all_srt_files(flights_dir)
+    # Check for arguments
+    if len(sys.argv) > 1:
+        input_path = Path(sys.argv[1])
+        if input_path.is_file():
+            # Process single file
+            print(f"🚀 Starting metadata extraction for file: {input_path.name}\n")
+            # We need to adapt the process_all logic or just call it on the parent and filter?
+            # Actually, `process_all_srt_files` takes a base_dir and rglobs.
+            # Let's write a wrapper or just be smart.
+            # If file, we can just process that one file.
+            
+            # Reusing the existing structure which expects a directory output structure
+            # We'll treat the parent dir as the base for output calculation or just use the logic below
+            # Ideally we want to output to data/processed...
+            
+            output_base = project_dir / 'data' / 'processed' / 'extracted_metadata'
+            output_base.mkdir(parents=True, exist_ok=True)
+            
+            base_name = input_path.stem
+            file_output_dir = output_base / base_name
+            file_output_dir.mkdir(exist_ok=True)
+            
+            try:
+                frames_data = parse_srt_file(input_path)
+                if frames_data:
+                    csv_path = file_output_dir / f'{base_name}_metadata.csv'
+                    write_csv(frames_data, csv_path)
+                    print(f"   ✅ Saved to: {csv_path}")
+                else:
+                    print("   ⚠️  No data found.")
+            except Exception as e:
+                print(f"   ❌ Error: {e}")
+                
+        elif input_path.is_dir():
+            print(f"🚀 Starting metadata extraction from directory: {input_path}\n")
+            process_all_srt_files(input_path)
+        else:
+            print(f"❌ Invalid path: {input_path}")
+    else:
+        # Default behavior
+        flights_dir = project_dir / "datasets" / "flights"
+        print("🚀 Starting metadata extraction from DJI SRT files (Default Folder)\n")
+        print(f"📂 Directory: {flights_dir}\n")
+        process_all_srt_files(flights_dir)

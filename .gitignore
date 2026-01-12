@@ -26,3 +26,6 @@ Thumbs.db
 # Livestream Data
 datasets/livestreams/
 data/processed/stream_logs/
+mediamtx
+*.log
+datasets/livestreams/client_recordings/

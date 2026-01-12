@@ -54,7 +54,8 @@ def find_video_in_folder(folder: Path):
     if not candidates:
         raise FileNotFoundError(f"No video found in {folder}")
 
-    # Return the first one found
+    # Return the first one found (Sort by newest first to prioritize recent recordings)
+    candidates.sort(key=lambda x: x.stat().st_mtime, reverse=True)
     video_path = candidates[0]
     print(f"[INFO] Selected video: {video_path.name}")
     return video_path
@@ -91,11 +92,16 @@ def write_metadata_with_health(original_fieldnames, rows, output_path: Path):
 
     print(f"[INFO] Saved new CSV to: {output_path}")
 
-def process_video_and_csv(video_folder, metadata_csv):
+def process_video_and_csv(video_path_or_folder, metadata_csv):
     """
     Main processing function.
     """
-    video_path = find_video_in_folder(video_folder)
+    path_obj = Path(video_path_or_folder)
+    if path_obj.is_file():
+        video_path = path_obj
+        print(f"[INFO] Processing single video file: {video_path.name}")
+    else:
+        video_path = find_video_in_folder(path_obj)
     fieldnames, rows = load_metadata_rows(metadata_csv)
 
     # Load Model
@@ -224,6 +230,35 @@ def process_video_stream(stream_url: str, output_csv_path: Path = None, metadata
     # Nginx handles recording now (to preserve GPS/metadata)
     # We just focus on visualization
     
+    
+    # Start raw recording via FFmpeg (Client-side recording)
+    # This attempts to capture everything (data/subtitles) exactly as received by the client
+    import subprocess
+    import signal
+    
+    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    raw_rec_dir = PROJECT_ROOT / "datasets" / "livestreams" / "client_recordings"
+    raw_rec_dir.mkdir(parents=True, exist_ok=True)
+    raw_rec_path = raw_rec_dir / f"client_rec_{timestamp_str}.mp4" # MP4 container might hold subtitles better
+    
+    print(f"[INFO] Starting client-side raw recording to: {raw_rec_path}")
+    
+    # ffmpeg command: read from stream_url, copy all streams (-map 0 -c copy), save to file
+    # -y to overwrite if exists (unlikely with timestamp)
+    # -loglevel error to reduce noise
+    ffmpeg_cmd = [
+        "ffmpeg", "-y",
+        "-i", stream_url,
+        "-map", "0",       # Map ALL streams (video, audio, data, subs)
+        "-c", "copy",      # Copy raw codec (no transcoding)
+        "-f", "mp4",       # Use MP4 container
+        "-movflags", "+faststart", # Optimize for MP4
+        str(raw_rec_path)
+    ]
+    
+    # Start FFmpeg in background
+    ffmpeg_proc = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
     frame_count = 0
     processed_count = 0
 
@@ -312,6 +347,16 @@ def process_video_stream(stream_url: str, output_csv_path: Path = None, metadata
     finally:
         csv_file.close()
         container.close()
+        # Stop client-side recording
+        if 'ffmpeg_proc' in locals() and ffmpeg_proc.poll() is None:
+             print("[INFO] Stopping client-side recording...")
+             ffmpeg_proc.terminate()
+             try:
+                 ffmpeg_proc.wait(timeout=5)
+             except subprocess.TimeoutExpired:
+                 ffmpeg_proc.kill()
+             print(f"[INFO] Client recording saved: {raw_rec_path}")
+
         print(f"[INFO] Stream processing complete. Processed {processed_count} frames.")
         print(f"[INFO] Results saved to: {output_csv_path}")
 
