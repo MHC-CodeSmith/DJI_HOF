@@ -4,7 +4,7 @@ Web server for real-time flight visualization.
 Serves the map interface and provides API endpoints for CSV data.
 """
 
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_from_directory, request
 from flask_cors import CORS
 from pathlib import Path
 import csv
@@ -81,10 +81,17 @@ def index():
     """Serve the main HTML page."""
     return send_from_directory(PROJECT_ROOT / "src" / "web", 'index.html')
 
+@app.route('/app.js')
+def app_js():
+    """Serve the JavaScript file."""
+    return send_from_directory(PROJECT_ROOT / "src" / "web", 'app.js')
 
 @app.route('/api/points')
 def get_points():
-    """API endpoint: Get all GPS points with health data."""
+    """
+    API endpoint: Get GPS points with smart limiting for initial load.
+    Returns last 5,000 points with sampling (every 10th point = 500 points).
+    """
     csv_path = load_latest_stream_csv()
     if not csv_path:
         return jsonify({
@@ -93,14 +100,40 @@ def get_points():
             "points": []
         })
     
-    points = read_csv_data(csv_path)
+    # Get parameters with defaults
+    limit = request.args.get('limit', default=5000, type=int)
     
+    sample_rate = request.args.get('sample', default=10, type=int)
+    sample_rate = max(1, min(sample_rate, 100))  # Between 1 and 100
+    
+    # Read all points
+    all_points = read_csv_data(csv_path)
+    
+    if not all_points:
+        return jsonify({
+            "success": True,
+            "csv_file": csv_path.name,
+            "last_updated": datetime.fromtimestamp(csv_path.stat().st_mtime).isoformat(),
+            "total_points": 0,
+            "sample_rate": sample_rate,
+            "returned_count": 0,
+            "points": []
+        })
+    
+    # Take last N points (most recent)
+    recent_points = all_points[-limit:] if len(all_points) > limit else all_points
+    
+    # Sample points (every Nth point)
+    sampled_points = recent_points[::sample_rate]
+
     return jsonify({
         "success": True,
         "csv_file": csv_path.name,
         "last_updated": datetime.fromtimestamp(csv_path.stat().st_mtime).isoformat(),
-        "point_count": len(points),
-        "points": points
+        "total_points": len(all_points),
+        "sample_rate": sample_rate,
+        "returned_count": len(sampled_points),
+        "points": sampled_points
     })
 
 @app.route('/api/stats')
@@ -151,6 +184,46 @@ def get_stats():
         "last_updated": datetime.fromtimestamp(csv_path.stat().st_mtime).isoformat()
     })
 
+@app.route('/api/points/new')
+def get_new_points():
+    """
+    API endpoint: Get only new points since last frame number (for incremental updates).
+    Query parameter: ?since=<frame_number>
+    """
+    csv_path = load_latest_stream_csv()
+    if not csv_path:
+        return jsonify({
+            "success": False,
+            "message": "No stream data available yet",
+            "points": []
+        })
+    
+    # Get last known frame number from client
+    last_frame = request.args.get('since', default=0, type=int)
+    
+    points = read_csv_data(csv_path)
+    
+    if not points:
+        return jsonify({
+            "success": True,
+            "points": [],
+            "total_points": 0,
+            "new_count": 0
+        })
+    
+    # Filter points with frame_number > last_frame
+    new_points = [
+        p for p in points 
+        if p.get("frame_number") and safe_float(p["frame_number"], 0) > last_frame
+    ]
+    
+    return jsonify({
+        "success": True,
+        "points": new_points,
+        "total_points": len(points),
+        "new_count": len(new_points)
+    })
+
 @app.route('/api/latest')
 def get_latest():
     """API endpoint: Get only the latest point (for real-time updates)."""
@@ -175,7 +248,8 @@ if __name__ == '__main__':
     print("🚀 Starting web server...")
     print("📡 API endpoints:")
     print(f"   - http://localhost:{PORT}/ (Map interface)")
-    print(f"   - http://localhost:{PORT}/api/points (All points)")
+    print(f"   - http://localhost:{PORT}/api/points (Initial load: sampled points)")
+    print(f"   - http://localhost:{PORT}/api/points/new?since=<frame> (Incremental updates)")
     print(f"   - http://localhost:{PORT}/api/stats (Statistics)")
     print(f"   - http://localhost:{PORT}/api/latest (Latest point)")
     print("\n💡 Make sure sync_video_csv.py is running to generate CSV data!")

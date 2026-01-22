@@ -1,7 +1,8 @@
-// TODO: auto update frequently
 // === CONFIGURATION ===
 const API_BASE = window.location.origin; // Use same origin as the page
-const UPDATE_INTERVAL = 20000; // Update every 20 seconds
+const UPDATE_INTERVAL = 2000; // Update every 2 seconds for real-time feel
+const INITIAL_LOAD_LIMIT = 50000;
+const INITIAL_LOAD_SAMPLE_RATE = 10;
 let autoUpdate = true;
 let updateTimer = null;
 let map = null;
@@ -9,6 +10,8 @@ let markersLayer = null;
 let pathLayer = null;
 let heatLayer = null;
 let allPoints = [];
+let lastFrameNumber = 0;
+let isInitialLoad = true;
 
 // === MAP INITIALIZATION ===
 function initMap(centerLat, centerLon) {
@@ -77,23 +80,24 @@ function updateMap(points) {
   });
 
   // Add heatmap layer
-  const heatData = points.map(p => [p.lat, p.lon, p.health_index / 100]);
-  heatLayer = L.heatLayer(heatData, {
-    radius: 20,
-    blur: 15,
-    maxZoom: 17,
-    max: 1.0,
-    gradient: {
-      0.0: 'blue',
-      0.5: 'yellow',
-      1.0: 'red'
-    }
-  }).addTo(map);
+  // const heatData = points.map(p => [p.lat, p.lon, p.health_index / 100]);
+  // heatLayer = L.heatLayer(heatData, {
+  //   radius: 20,
+  //   blur: 15,
+  //   maxZoom: 17,
+  //   max: 1.0,
+  //   gradient: {
+  //     0.0: 'blue',
+  //     0.5: 'yellow',
+  //     1.0: 'red'
+  //   }
+  // }).addTo(map);
 
-  // Fit map to bounds
-  if (points.length > 0) {
+  // Fit map to bounds (only on initial load)
+  if (points.length > 0 && isInitialLoad) {
     const bounds = path.getBounds();
     map.fitBounds(bounds, { padding: [50, 50] });
+    isInitialLoad = false;
   }
 }
 
@@ -114,31 +118,59 @@ function updateStats(stats) {
 // === FETCH DATA ===
 async function fetchData() {
   try {
-    // Fetch all points
-    const pointsRes = await fetch(`${API_BASE}/api/points`);
-    const pointsData = await pointsRes.json();
-    
-    if (pointsData.success && pointsData.points) {
-      allPoints = pointsData.points;
+    if (isInitialLoad) {
+      // Initial load: Get sampled points (last 50,000 with every 10th point = 500 points)
+      const pointsRes = await fetch(`${API_BASE}/api/points?limit=${INITIAL_LOAD_LIMIT}&sample=${INITIAL_LOAD_SAMPLE_RATE}`);
+      const pointsData = await pointsRes.json();
       
-      // Initialize map if not done
-      if (!map && allPoints.length > 0) {
-        const firstPoint = allPoints[0];
-        initMap(firstPoint.lat, firstPoint.lon);
+      if (pointsData.success && pointsData.points) {
+        allPoints = pointsData.points;
+        
+        // Initialize map if not done
+        if (!map && allPoints.length > 0) {
+          const firstPoint = allPoints[0];
+          initMap(firstPoint.lat, firstPoint.lon);
+        }
+        
+        // Update map
+        updateMap(allPoints);
+        
+        // Update last frame number
+        if (allPoints.length > 0) {
+          const lastPoint = allPoints[allPoints.length - 1];
+          lastFrameNumber = parseInt(lastPoint.frame_number) || 0;
+        }
+        
+        // Update last update time
+        if (pointsData.last_updated) {
+          const updateTime = new Date(pointsData.last_updated);
+          document.getElementById('lastUpdate').textContent = 
+            `Last update: ${updateTime.toLocaleTimeString()} (${pointsData.returned_count} of ${pointsData.total_points} points)`;
+        }
       }
+    } else {
+      // Incremental update: Get only new points since last frame
+      const newPointsRes = await fetch(`${API_BASE}/api/points/new?since=${lastFrameNumber}`);
+      const newPointsData = await newPointsRes.json();
       
-      // Update map
-      updateMap(allPoints);
-      
-      // Update last update time
-      if (pointsData.last_updated) {
-        const updateTime = new Date(pointsData.last_updated);
+      if (newPointsData.success && newPointsData.points && newPointsData.points.length > 0) {
+        // Add new points to existing array
+        allPoints.push(...newPointsData.points);
+        
+        // Update last frame number
+        const lastNewPoint = newPointsData.points[newPointsData.points.length - 1];
+        lastFrameNumber = parseInt(lastNewPoint.frame_number) || lastFrameNumber;
+        
+        // Update map with all points
+        updateMap(allPoints);
+        
+        // Update last update time
         document.getElementById('lastUpdate').textContent = 
-          `Last update: ${updateTime.toLocaleTimeString()}`;
+          `Last update: ${new Date().toLocaleTimeString()} (+${newPointsData.new_count} new, ${newPointsData.total_points} total)`;
       }
     }
 
-    // Fetch stats
+    // Fetch stats (always fetch for accurate statistics)
     const statsRes = await fetch(`${API_BASE}/api/stats`);
     const statsData = await statsRes.json();
     
