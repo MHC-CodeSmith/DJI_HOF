@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Live Flight Vegetation Monitor</title>
+
+  <!-- Bootstrap for layout -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Leaflet for map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Leaflet Heatmap plugin -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+  <!-- Application JavaScript -->
+  <script src="app.js"></script>
+
+  <style>
+    body { background-color: #f8f9fa; }
+    #map { height: 70vh; border: 1px solid #ccc; }
+    .stat-card { min-width: 180px; }
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+    .status-healthy { background-color: #28a745; }
+    .status-moderate { background-color: #ffc107; }
+    .status-unhealthy { background-color: #dc3545; }
+  </style>
+</head>
+<body>
+<div class="container-fluid p-3">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Live Flight Vegetation Monitor</h3>
+    <div>
+      <small class="text-muted" id="lastUpdate">Waiting for data...</small>
+      <button class="btn btn-sm btn-outline-secondary ms-2" onclick="toggleAutoUpdate()">
+        <span id="autoUpdateStatus">Auto: ON</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="row g-3 mb-3">
+    <div class="col-auto">
+      <div class="card stat-card">
+        <div class="card-body">
+          <h6 class="card-title mb-1">Total Points</h6>
+          <span id="totalPoints" class="fw-bold">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-auto">
+      <div class="card stat-card">
+        <div class="card-body">
+          <h6 class="card-title mb-1">Avg Health</h6>
+          <span id="avgHealth" class="fw-bold">-</span>%
+        </div>
+      </div>
+    </div>
+    <div class="col-auto">
+      <div class="card stat-card">
+        <div class="card-body">
+          <h6 class="card-title mb-1">
+            <span class="status-indicator status-healthy"></span>Healthy
+          </h6>
+          <span id="healthyCount" class="fw-bold">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-auto">
+      <div class="card stat-card">
+        <div class="card-body">
+          <h6 class="card-title mb-1">
+            <span class="status-indicator status-moderate"></span>Moderate
+          </h6>
+          <span id="moderateCount" class="fw-bold">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-auto">
+      <div class="card stat-card">
+        <div class="card-body">
+          <h6 class="card-title mb-1">
+            <span class="status-indicator status-unhealthy"></span>Unhealthy
+          </h6>
+          <span id="unhealthyCount" class="fw-bold">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content: map + legend -->
+  <div class="row g-3">
+    <div class="col-lg-9">
+      <div id="map"></div>
+    </div>
+    <div class="col-lg-3">
+      <div class="card">
+        <div class="card-header">Legend</div>
+        <div class="card-body">
+          <p class="mb-2">
+            <span class="status-indicator status-healthy"></span>
+            Healthy (&gt;60%)
+          </p>
+          <p class="mb-2">
+            <span class="status-indicator status-moderate"></span>
+            Moderate (40-60%)
+          </p>
+          <p class="mb-2">
+            <span class="status-indicator status-unhealthy"></span>
+            Unhealthy (&lt;40%)
+          </p>
+          <hr/>
+          <h6>Flight Info</h6>
+          <p id="flightInfo" class="small text-muted mb-0">Loading…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

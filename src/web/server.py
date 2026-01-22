@@ -15,9 +15,8 @@ from typing import List, Dict
 HOST = '127.0.0.1'
 PORT = 5001
 
-# TODO: if I move http_server.py I need to adjust the PROJECT_ROOT
-PROJECT_ROOT = Path(__file__).resolve().parent
-app = Flask(__name__, static_folder=str(PROJECT_ROOT), static_url_path='')
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+app = Flask(__name__, static_folder=str(PROJECT_ROOT / "src" / "web"), static_url_path='')
 CORS(app)  # Enable CORS for API access
 
 # Paths
@@ -80,7 +79,7 @@ def read_csv_data(csv_path: Path) -> List[Dict]:
 @app.route('/')
 def index():
     """Serve the main HTML page."""
-    return send_from_directory(PROJECT_ROOT, 'index.html')
+    return send_from_directory(PROJECT_ROOT / "src" / "web", 'index.html')
 
 
 @app.route('/api/points')

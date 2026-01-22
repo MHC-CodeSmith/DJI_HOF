@@ -11,6 +11,7 @@ Commands:
     sync            Sync video frames with metadata and apply health model.
     map-flight      Generate the basic flight trajectory map.
     map-analytical  Generate the analytical health heatmap.
+    web             Start the web server for real-time flight visualization.
     pipeline        Run the full pipeline (Extract -> Sync -> Maps). (Model assumed trained)
 """
 
@@ -18,6 +19,7 @@ import argparse
 import sys
 import subprocess
 from pathlib import Path
+import importlib.util
 
 # Define paths to scripts
 PROJECT_ROOT = Path(__file__).parent.resolve()
@@ -28,6 +30,7 @@ SCRIPTS = {
     "consolidate": PROJECT_ROOT / "src" / "processing" / "consolidate_csvs.py",
     "map-flight": PROJECT_ROOT / "src" / "visualization" / "flight_map.py",
     "map-analytical": PROJECT_ROOT / "src" / "visualization" / "analytical_map.py",
+    "web": PROJECT_ROOT / "src" / "web" / "server.py",
 }
 
 def run_script(script_name, args=None):
@@ -63,6 +66,7 @@ def main():
     subparsers.add_parser("consolidate", help="Consolidate all CSVs into one")
     subparsers.add_parser("map-flight", help="Generate flight trajectory map")
     subparsers.add_parser("map-analytical", help="Generate analytical health map")
+    subparsers.add_parser("web", help="Start the web server for real-time visualization")
     subparsers.add_parser("pipeline", help="Run extract -> sync -> maps sequence")
 
     args, unknown_args = parser.parse_known_args()
@@ -80,6 +84,11 @@ def main():
                 print(f"\n⛔ Pipeline stopped due to error in {step}.")
                 sys.exit(1)
         print("\n🎉 Full pipeline completed successfully!")
+    elif args.command == "web":
+        # Run web server (long-running process)
+        success = run_script("web", unknown_args)
+        if not success:
+            sys.exit(1)
     else:
         # Run single command
         success = run_script(args.command, unknown_args)
