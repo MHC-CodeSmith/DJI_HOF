@@ -11,3 +11,8 @@ Classification Report:
    macro avg       0.65      0.60      0.62      6192
 weighted avg       0.81      0.83      0.81      6192
 
+Confusion Matrix Breakdown:
+- True Unhealthy (Correct Detection): 4887
+- False Healthy (Dangerous Miss): 338
+- False Unhealthy (False Alarm): 706
+- True Healthy (Correct Healthy): 261
